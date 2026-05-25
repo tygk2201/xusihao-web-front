@@ -1,61 +1,59 @@
-# 工程技术报告智能解析与系统图谱分析工具
+# DocInsight Frontend
 
-这是一个前后端分离的练习项目，按《前端开发策划书》初始化。
+基于 `Vite + Vue 3 + Element Plus + AntV G6` 重构的工程技术报告前端。
 
-## 项目结构
+## 技术栈
 
-```text
-lx-test/
-├── frontend/   # 前端 H5 / 单页应用原型
-└── backend/    # Node.js / Express Mock API 服务
-```
+- `Vite`
+- `Vue 3`
+- `Vue Router`
+- `Element Plus`
+- `AntV G6`
 
-## 本地运行
+## 页面结构
 
-### 后端
+- `工程报告库` `/dashboard`
+- `报告解析` `/parsing`
+- `系统图谱` `/graph`
+- `工程问答` `/qa`
+
+## 本地启动
 
 ```bash
-cd backend
 npm install
 npm run dev
 ```
 
-默认地址：
+默认开发地址：
 
 ```text
-http://localhost:3000
+http://localhost:5173
 ```
 
-### 前端
-
-前端是静态项目，可以直接打开 `frontend/index.html`。
-
-也可以启动本地静态服务：
+## 构建
 
 ```bash
-cd frontend
-python3 -m http.server 5173
+npm run build
+npm run preview
 ```
 
-然后访问：
+## 目录说明
 
 ```text
-http://127.0.0.1:5173
+src/
+  assets/         # 全局样式
+  components/     # 通用组件
+  composables/    # 状态与组合逻辑
+  data/           # Mock 数据
+  layouts/        # 应用壳层
+  router/         # 路由配置
+  views/          # 页面组件
 ```
 
-## 当前实现
+## 当前说明
 
-- 工程报告库 Dashboard
-- 报告解析三栏页
-- 系统图谱页，包含构成图和影响图
-- 工程问答页
-- 上传弹窗、API 配置弹窗、Toast 通知
-- 后端 Mock API，包括上传、解析状态、结构、构成图、影响图、问答、更新
-
-## 后续练习方向
-
-- 将前端从原生 JS 升级到 Vue 或 React
-- 后端接入真实文档解析
-- 接入数据库保存报告、节点、参数、关系
-- 接入大模型 API 做工程问答
-- 部署到腾讯云服务器
+- 已将原始静态原型改造成单页应用结构
+- 已添加左侧菜单与页面路由
+- 已用 Element Plus 重建界面骨架
+- 已用 G6 替代原 ECharts 图谱区域
+- 当前仍使用前端 Mock 数据，尚未接真实后端接口
