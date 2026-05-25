@@ -1,0 +1,350 @@
+# lx-test 部署操作手册
+
+本文档用于记录本地修改代码后，如何更新部署到腾讯云轻量服务器。
+
+## 1. 当前服务器信息
+
+```text
+域名：https://luoxiaomiao.cn
+备用域名：https://www.luoxiaomiao.cn
+服务器公网 IP：111.231.16.149
+服务器用户：ubuntu
+服务器项目目录：/opt/lx-test
+前端目录：/opt/lx-test/frontend
+后端目录：/opt/lx-test/backend
+后端服务名：lx-test-api
+后端端口：3000
+Nginx 配置：/etc/nginx/sites-available/luoxiaomiao.cn
+密码：Luoxiao1234
+```
+
+不要把服务器密码写入代码仓库或文档。建议后续改用 SSH 密钥登录。
+
+## 2. 本地项目目录
+
+```text
+/Users/luoxiao/Desktop/lx-test
+├── frontend
+├── backend
+├── README.md
+└── DEPLOYMENT.md
+```
+
+## 3. 本地预览
+
+### 启动后端
+
+在本地 Mac 终端执行：
+
+```bash
+cd /Users/luoxiao/Desktop/lx-test/backend
+npm start
+```
+
+后端地址：
+
+```text
+http://127.0.0.1:3000/api/health
+```
+
+### 启动前端
+
+另开一个终端执行：
+
+```bash
+cd /Users/luoxiao/Desktop/lx-test/frontend
+python3 -m http.server 5173
+```
+
+前端地址：
+
+```text
+http://127.0.0.1:5173/index.html
+```
+
+## 4. 部署前检查
+
+前端接口地址应保持为相对路径：
+
+```js
+const API_BASE = "/api";
+```
+
+文件位置：
+
+```text
+/Users/luoxiao/Desktop/lx-test/frontend/js/api.js
+```
+
+这样线上请求会走：
+
+```text
+https://luoxiaomiao.cn/api/...
+```
+
+## 5. 上传代码到服务器
+
+在本地 Mac 终端执行：
+
+```bash
+scp -r /Users/luoxiao/Desktop/lx-test ubuntu@111.231.16.149:~/lx-test
+```
+
+如果服务器上已经存在旧的 `~/lx-test`，可以先登录服务器删除：
+
+```bash
+ssh ubuntu@111.231.16.149
+rm -rf ~/lx-test
+exit
+```
+
+然后重新上传。
+
+## 6. 移动代码到正式目录
+
+上传完成后，登录服务器：
+
+```bash
+ssh ubuntu@111.231.16.149
+```
+
+执行：
+
+```bash
+sudo rm -rf /opt/lx-test
+sudo mv ~/lx-test /opt/lx-test
+sudo chown -R ubuntu:ubuntu /opt/lx-test
+```
+
+检查目录：
+
+```bash
+ls -la /opt/lx-test
+```
+
+应该看到：
+
+```text
+frontend
+backend
+README.md
+DEPLOYMENT.md
+```
+
+## 7. 更新后端服务
+
+进入后端目录：
+
+```bash
+cd /opt/lx-test/backend
+```
+
+安装依赖：
+
+```bash
+npm install
+```
+
+如果是第一次部署，安装 PM2：
+
+```bash
+sudo npm install -g pm2
+```
+
+启动或重启后端：
+
+```bash
+pm2 restart lx-test-api || pm2 start src/server.js --name lx-test-api
+pm2 save
+```
+
+检查服务状态：
+
+```bash
+pm2 list
+```
+
+正常状态应为：
+
+```text
+lx-test-api  online
+```
+
+验证后端接口：
+
+```bash
+curl http://127.0.0.1:3000/api/health
+```
+
+正常返回：
+
+```json
+{"ok":true,"service":"doc-insight-engineering-api"}
+```
+
+## 8. 检查 Nginx 配置
+
+Nginx 配置文件：
+
+```bash
+sudo nano /etc/nginx/sites-available/luoxiaomiao.cn
+```
+
+核心配置应包含：
+
+```nginx
+root /opt/lx-test/frontend;
+index index.html;
+
+location / {
+    try_files $uri $uri/ /index.html;
+}
+
+location /api/ {
+    proxy_pass http://127.0.0.1:3000/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
+
+修改后检查并重载：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## 9. 线上验证
+
+浏览器打开：
+
+```text
+https://luoxiaomiao.cn
+```
+
+接口验证：
+
+```text
+https://luoxiaomiao.cn/api/health
+```
+
+服务器上也可以执行：
+
+```bash
+curl -I https://luoxiaomiao.cn
+curl https://luoxiaomiao.cn/api/health
+```
+
+## 10. 常用维护命令
+
+查看后端进程：
+
+```bash
+pm2 list
+```
+
+查看后端日志：
+
+```bash
+pm2 logs lx-test-api
+```
+
+重启后端：
+
+```bash
+pm2 restart lx-test-api
+```
+
+停止后端：
+
+```bash
+pm2 stop lx-test-api
+```
+
+重载 Nginx：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+查看 Nginx 状态：
+
+```bash
+sudo systemctl status nginx
+```
+
+查看 HTTPS 证书：
+
+```bash
+sudo certbot certificates
+```
+
+测试证书自动续期：
+
+```bash
+sudo certbot renew --dry-run
+```
+
+## 11. 常见问题
+
+### 1. `npm: command not found`
+
+说明服务器没有安装 Node.js / npm。
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v
+npm -v
+```
+
+### 2. `pm2: command not found`
+
+说明 PM2 没安装。
+
+```bash
+sudo npm install -g pm2
+```
+
+### 3. 页面能打开，但接口失败
+
+检查后端：
+
+```bash
+pm2 list
+curl http://127.0.0.1:3000/api/health
+```
+
+检查 Nginx `/api/` 代理配置：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 4. HTTPS 打不开
+
+检查 443 端口、防火墙和 Nginx：
+
+```bash
+sudo ss -lntp | grep ':443'
+sudo nginx -t
+sudo certbot certificates
+```
+
+腾讯云轻量服务器防火墙需要开放：
+
+```text
+TCP 80
+TCP 443
+TCP 22
+```
+
+## 12. 推荐后续优化
+
+- 配置 SSH 密钥登录，减少密码输入。
+- 使用 Git 管理代码，通过 `git pull` 更新服务器代码。
+- 给后端增加 `.env` 环境变量文件。
+- 增加数据库持久化。
+- 后续改成 Vite / Vue / React 工程化前端。
