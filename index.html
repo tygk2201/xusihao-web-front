@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocInsight 工程技术版</title>
+  <link rel="icon" href="data:," />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="./css/engineering-theme.css" />
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <div id="app" class="min-h-screen grid grid-cols-[260px_1fr]">
+    <aside class="sidebar bg-slate-950 text-white flex flex-col">
+      <div class="h-16 px-5 flex items-center gap-3 border-b border-white/10">
+        <span class="iconify text-2xl text-blue-300" data-icon="lucide:factory"></span>
+        <div>
+          <div class="font-semibold leading-tight">DocInsight</div>
+          <div class="text-xs text-slate-400">工程技术版</div>
+        </div>
+      </div>
+
+      <nav class="p-3 space-y-1" id="sideNav">
+        <button class="nav-item active" data-page="dashboard">
+          <span class="iconify" data-icon="lucide:file-archive"></span>
+          工程报告库
+        </button>
+        <button class="nav-item" data-page="parsing">
+          <span class="iconify" data-icon="lucide:file-search"></span>
+          报告解析
+        </button>
+        <button class="nav-item" data-page="graph">
+          <span class="iconify" data-icon="lucide:git-graph"></span>
+          系统图谱
+        </button>
+        <button class="nav-item" data-page="qa">
+          <span class="iconify" data-icon="lucide:messages-square"></span>
+          工程问答
+        </button>
+      </nav>
+
+      <div class="mt-auto p-4 border-t border-white/10">
+        <div class="text-xs text-slate-400 mb-2">当前文档</div>
+        <div id="currentDocName" class="text-sm font-medium truncate">3号机组故障分析报告</div>
+        <div class="mt-4 h-2 rounded-full bg-white/10 overflow-hidden">
+          <div class="h-full w-2/3 bg-blue-400"></div>
+        </div>
+        <div class="mt-2 text-xs text-slate-400">存储空间 66%</div>
+      </div>
+    </aside>
+
+    <section class="min-w-0 flex flex-col">
+      <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
+        <div>
+          <div id="breadcrumb" class="text-xs text-slate-500">工程报告库 / Dashboard</div>
+          <h1 id="pageTitle" class="text-xl font-semibold">工程报告库</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <span class="iconify absolute left-3 top-2.5 text-slate-400" data-icon="lucide:search"></span>
+            <input id="globalSearch" class="search-input pl-9" placeholder="搜索设备 / 系统 / 参数..." />
+          </div>
+          <button id="openUploadBtn" class="primary-btn">
+            <span class="iconify" data-icon="lucide:upload"></span>
+            上传报告
+          </button>
+          <button id="openConfigBtn" class="icon-btn" aria-label="API 配置">
+            <span class="iconify" data-icon="lucide:settings"></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="flex-1 min-h-0 overflow-auto p-6">
+        <section id="dashboardPage" class="page-view"></section>
+        <section id="parsingPage" class="page-view hidden"></section>
+        <section id="graphPage" class="page-view hidden"></section>
+        <section id="qaPage" class="page-view hidden"></section>
+      </main>
+    </section>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div id="toastRoot" class="fixed right-5 top-5 z-50 space-y-2"></div>
+
+  <script src="./js/mock-data.js"></script>
+  <script src="./js/state.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/utils/echarts-adapter.js"></script>
+  <script src="./js/components/toast.js"></script>
+  <script src="./js/components/upload-modal.js"></script>
+  <script src="./js/components/config-modal.js"></script>
+  <script src="./js/pages/dashboard.js"></script>
+  <script src="./js/pages/parsing.js"></script>
+  <script src="./js/pages/graph.js"></script>
+  <script src="./js/pages/qa.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
