@@ -42,6 +42,41 @@ const containerRef = ref(null);
 let graph;
 let resizeObserver;
 
+function getReadableTextColor(fill) {
+  if (typeof fill !== "string" || !fill.startsWith("#")) {
+    return "#10233f";
+  }
+
+  const normalized = fill.length === 4
+    ? `#${fill[1]}${fill[1]}${fill[2]}${fill[2]}${fill[3]}${fill[3]}`
+    : fill;
+  const red = parseInt(normalized.slice(1, 3), 16);
+  const green = parseInt(normalized.slice(3, 5), 16);
+  const blue = parseInt(normalized.slice(5, 7), 16);
+  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+
+  return brightness > 150 ? "#10233f" : "#ffffff";
+}
+
+function normalizeGraphData(data) {
+  return {
+    ...data,
+    nodes: (data.nodes || []).map((node) => {
+      const labelText = node.style?.labelText || node.data?.title || node.data?.name || node.data?.label || node.label || node.id;
+      const fill = node.style?.fill;
+
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          labelText,
+          labelFill: node.style?.labelFill || getReadableTextColor(fill)
+        }
+      };
+    })
+  };
+}
+
 function renderGraph() {
   if (!containerRef.value) {
     return;
@@ -49,13 +84,14 @@ function renderGraph() {
 
   const width = containerRef.value.clientWidth || 800;
   const height = containerRef.value.clientHeight || 480;
+  const data = normalizeGraphData(props.data);
 
   if (!graph) {
     graph = new Graph({
       container: containerRef.value,
       width,
       height,
-      data: props.data,
+      data,
       node: props.node,
       edge: props.edge,
       behaviors: ["drag-canvas", "zoom-canvas", "drag-element"]
@@ -65,7 +101,7 @@ function renderGraph() {
   }
 
   graph.setSize([width, height]);
-  graph.setData(props.data);
+  graph.setData(data);
   graph.render();
 }
 
