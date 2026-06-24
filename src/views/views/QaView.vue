@@ -4,7 +4,7 @@
       <div class="qa-header">
         <div>
           <h2>工程知识助手</h2>
-          <p>当前报告：{{ currentDoc.name }}</p>
+          <p>当前报告：{{ currentDoc?.name || "未选择" }}</p>
         </div>
         <el-button @click="resetMessages">新对话</el-button>
       </div>
@@ -47,7 +47,7 @@
         <div class="qa-form">
           <el-input
             v-model="draftQuestion"
-            placeholder="例如：主泵故障会产生什么连锁反应？"
+            placeholder="例如：主设备故障会产生什么连锁影响？"
             @keyup.enter="submitQuestion"
           />
           <el-button type="primary" @click="submitQuestion">发送</el-button>
@@ -56,24 +56,26 @@
     </section>
 
     <aside class="surface-panel qa-side">
-      <div class="section-heading">关联图谱</div>
+      <div class="section-heading">关联信息</div>
       <el-descriptions :column="1" border>
-        <el-descriptions-item label="实体">循环水泵</el-descriptions-item>
-        <el-descriptions-item label="路径">电站 / 冷却系统 / 循环水泵</el-descriptions-item>
-        <el-descriptions-item label="流量">1200 m3/h</el-descriptions-item>
-        <el-descriptions-item label="功率">250 kW</el-descriptions-item>
-        <el-descriptions-item label="影响">故障 -> 冷却中断 -> 温度升高</el-descriptions-item>
+        <el-descriptions-item label="实体">{{ firstParameter?.equipmentName || "暂无" }}</el-descriptions-item>
+        <el-descriptions-item label="参数">{{ firstParameter?.paramName || "暂无" }}</el-descriptions-item>
+        <el-descriptions-item label="数值">{{ firstParameter?.value || "-" }}</el-descriptions-item>
+        <el-descriptions-item label="单位">{{ firstParameter?.unit || "-" }}</el-descriptions-item>
+        <el-descriptions-item label="来源">{{ firstParameter?.source || "-" }}</el-descriptions-item>
       </el-descriptions>
     </aside>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useAppState } from "../composables/useAppState";
+import { computed, ref } from "vue";
+import { useAppState } from "../composables/useAppState.js";
 
 const draftQuestion = ref("");
-const { askQuestion, currentDoc, qaStarters, state } = useAppState();
+const { askQuestion, currentDoc, parameters, qaStarters, state } = useAppState();
+
+const firstParameter = computed(() => parameters.value[0] || null);
 
 function submitQuestion() {
   const question = draftQuestion.value.trim();
@@ -89,7 +91,7 @@ function resetMessages() {
     {
       id: "welcome",
       role: "assistant",
-      content: "基于当前工程报告的结构化数据，你可以直接询问设备、系统、参数或故障影响链。"
+      content: "当前问答仍为演示模式，后续将接入真实文档解析结果与知识图谱。"
     }
   ];
 }

@@ -21,7 +21,9 @@
             <div class="report-card__type">{{ report.type }}</div>
             <h3 class="report-card__title">{{ report.name }}</h3>
           </div>
-          <el-tag :type="statusMap[report.status].tone">{{ statusMap[report.status].label }}</el-tag>
+          <el-tag :type="statusMap[report.status]?.tone || 'info'">
+            {{ statusMap[report.status]?.label || report.status }}
+          </el-tag>
         </div>
 
         <div class="report-card__meta">上传时间：{{ report.uploadedAt }}</div>
@@ -45,7 +47,7 @@
 
         <div class="report-card__actions">
           <el-button @click="goGraph(report.id)">查看图谱</el-button>
-          <el-button type="primary" @click="goParsing(report.id)">继续编辑</el-button>
+          <el-button type="primary" @click="goParsing(report.id)">查看解析</el-button>
         </div>
       </article>
     </section>
@@ -55,45 +57,61 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { useAppState } from "../composables/useAppState";
+import { useAppState } from "../composables/useAppState.js";
 
 const router = useRouter();
 const reportFilter = ref("全部报告");
-const { reports, statusMap, state } = useAppState();
+const { reports, statusMap, selectReport } = useAppState();
 
-const filterOptions = ["全部报告", "解析中", "已完成", "需人工修正"];
+const filterOptions = ["全部报告", "解析中", "已完成", "需人工复核", "解析失败"];
 
 const stats = computed(() => [
-  { label: "报告总数", value: reports.length, tag: "实时", tagType: "primary" },
-  { label: "解析系统数", value: 11, tag: "结构", tagType: "success" },
-  { label: "提取设备数", value: 97, tag: "设备", tagType: "warning" },
-  { label: "图谱节点数", value: 186, tag: "关系", tagType: "info" }
+  { label: "报告总数", value: reports.value.length, tag: "实时", tagType: "primary" },
+  {
+    label: "已完成报告",
+    value: reports.value.filter((item) => item.status === "completed").length,
+    tag: "状态",
+    tagType: "success"
+  },
+  {
+    label: "提取设备数",
+    value: reports.value.reduce((sum, item) => sum + (item.equipments || 0), 0),
+    tag: "设备",
+    tagType: "warning"
+  },
+  {
+    label: "图谱关系数",
+    value: reports.value.reduce((sum, item) => sum + (item.relations || 0), 0),
+    tag: "关系",
+    tagType: "info"
+  }
 ]);
 
 const filteredReports = computed(() => {
   if (reportFilter.value === "全部报告") {
-    return reports;
+    return reports.value;
   }
 
   const map = {
     解析中: "processing",
     已完成: "completed",
-    需人工修正: "needReview"
+    需人工复核: "needReview",
+    解析失败: "failed"
   };
 
-  return reports.filter((item) => item.status === map[reportFilter.value]);
+  return reports.value.filter((item) => item.status === map[reportFilter.value]);
 });
 
-function selectReport(reportId, routeName) {
-  state.currentDocId = reportId;
+async function openReport(reportId, routeName) {
+  await selectReport(reportId);
   router.push({ name: routeName });
 }
 
 function goGraph(reportId) {
-  selectReport(reportId, "graph");
+  openReport(reportId, "graph");
 }
 
 function goParsing(reportId) {
-  selectReport(reportId, "parsing");
+  openReport(reportId, "parsing");
 }
 </script>

@@ -17,11 +17,7 @@
         text-color="#93a3b8"
         active-text-color="#ffffff"
       >
-        <el-menu-item
-          v-for="item in menuItems"
-          :key="item.name"
-          :index="item.path"
-        >
+        <el-menu-item v-for="item in menuItems" :key="item.name" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>
           <span>{{ item.label }}</span>
         </el-menu-item>
@@ -29,9 +25,11 @@
 
       <div class="doc-panel">
         <div class="doc-panel__label">当前文档</div>
-        <div class="doc-panel__name">{{ currentDoc.name }}</div>
-        <el-progress :percentage="66" :stroke-width="8" :show-text="false" color="#4c9bfd" />
-        <div class="doc-panel__meta">存储空间 66%</div>
+        <div class="doc-panel__name">{{ currentDoc?.name || "暂无文档" }}</div>
+        <el-progress :percentage="currentDoc?.completion || 0" :stroke-width="8" :show-text="false" color="#4c9bfd" />
+        <div class="doc-panel__meta">
+          {{ currentDoc ? `${statusMap[currentDoc.status]?.label || currentDoc.status} / ${currentDoc.completion || 0}%` : "等待上传" }}
+        </div>
       </div>
     </el-aside>
 
@@ -67,14 +65,15 @@
 
     <el-dialog v-model="uploadDialogVisible" title="上传工程技术报告" width="720px">
       <div class="dialog-grid">
-        <div class="upload-dropzone">
+        <div class="upload-dropzone" @click="fileInput?.click()">
+          <input ref="fileInput" type="file" accept=".pdf,application/pdf" hidden @change="handleFileChange" />
           <el-icon class="upload-icon"><UploadFilled /></el-icon>
-          <div class="upload-title">拖拽文件到此处，或点击选择文件</div>
-          <div class="upload-subtitle">支持 PDF / Word，最大 100MB</div>
+          <div class="upload-title">{{ uploadForm.file ? uploadForm.file.name : "点击选择 PDF 文件" }}</div>
+          <div class="upload-subtitle">仅支持 PDF，最大 100MB</div>
         </div>
         <div>
           <div class="dialog-section-title">报告类型</div>
-          <el-radio-group model-value="故障分析报告">
+          <el-radio-group v-model="uploadForm.type">
             <el-radio label="故障分析报告" value="故障分析报告" />
             <el-radio label="设计报告" value="设计报告" />
             <el-radio label="设备手册" value="设备手册" />
@@ -82,7 +81,7 @@
         </div>
         <div>
           <div class="dialog-section-title">解析选项</div>
-          <el-checkbox-group model-value="all">
+          <el-checkbox-group v-model="uploadForm.options">
             <el-checkbox label="提取系统层级结构" />
             <el-checkbox label="提取设备参数表" />
             <el-checkbox label="识别图纸实体" />
@@ -92,38 +91,36 @@
       </div>
       <template #footer>
         <el-button @click="uploadDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleMockUpload">开始上传并解析</el-button>
+        <el-button type="primary" :loading="state.uploading" @click="handleUpload">开始上传并解析</el-button>
       </template>
     </el-dialog>
 
     <el-dialog v-model="configDialogVisible" title="API 配置" width="560px">
       <el-form label-position="top">
         <el-form-item label="服务提供方">
-          <el-input v-model="state.apiConfig.provider" />
+          <el-input v-model="state.apiConfig.provider" disabled />
         </el-form-item>
         <el-form-item label="模型">
-          <el-select v-model="state.apiConfig.model" class="w-full">
-            <el-option label="DeepSeek-V3" value="DeepSeek-V3" />
-            <el-option label="Qwen3" value="Qwen3" />
-            <el-option label="GLM-4" value="GLM-4" />
-          </el-select>
+          <el-input v-model="state.apiConfig.model" disabled />
         </el-form-item>
-        <el-form-item label="API Key">
-          <el-input v-model="state.apiConfig.apiKey" placeholder="sk-xxxxxxxxxxxxxxxx" show-password />
+        <el-form-item label="后端状态">
+          <el-alert
+            :title="state.apiAvailable ? '后端 API 可用' : `后端 API 不可用：${state.lastError || '未知错误'}`"
+            :type="state.apiAvailable ? 'success' : 'warning'"
+            :closable="false"
+          />
         </el-form-item>
-        <el-alert title="当前仍使用 Mock 数据驱动界面，后续可在 API 层接真实服务。" type="success" :closable="false" />
       </el-form>
       <template #footer>
-        <el-button @click="configDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveConfig">保存配置</el-button>
+        <el-button @click="configDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </el-container>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { RouterView, useRoute } from "vue-router";
+import { computed, onMounted, reactive, ref } from "vue";
+import { RouterView, useRoute, useRouter } from "vue-router";
 import {
   ChatDotRound,
   Files,
@@ -134,30 +131,76 @@ import {
   UploadFilled
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
-import { useAppState } from "../composables/useAppState";
+import { useAppState } from "../composables/useAppState.js";
 
 const route = useRoute();
+const router = useRouter();
 const uploadDialogVisible = ref(false);
 const configDialogVisible = ref(false);
-const { state, currentDoc } = useAppState();
+const fileInput = ref(null);
+
+const {
+  state,
+  currentDoc,
+  loadReports,
+  loadReportResult,
+  selectReport,
+  statusMap,
+  uploadReport
+} = useAppState();
+
+const uploadForm = reactive({
+  file: null,
+  type: "故障分析报告",
+  options: ["提取系统层级结构", "提取设备参数表"]
+});
 
 const menuItems = [
-  { name: "dashboard", path: "/dashboard", label: "工程报告库", icon: Files },
+  { name: "dashboard", path: "/dashboard", label: "工程报告", icon: Files },
   { name: "parsing", path: "/parsing", label: "报告解析", icon: Memo },
   { name: "graph", path: "/graph", label: "系统图谱", icon: Share },
   { name: "qa", path: "/qa", label: "工程问答", icon: ChatDotRound }
 ];
 
 const activeMenu = computed(() => route.path);
-const breadcrumbText = computed(() => `工程报告库 / ${currentDoc.value.name} / ${route.meta.title}`);
+const breadcrumbText = computed(() => {
+  const name = currentDoc.value?.name || "未选择文档";
+  return `工程报告 / ${name} / ${route.meta.title}`;
+});
 
-function handleMockUpload() {
-  uploadDialogVisible.value = false;
-  ElMessage.success("已开始解析，当前页面展示的是工程化重构后的 Mock 流程。");
+function handleFileChange(event) {
+  uploadForm.file = event.target.files?.[0] || null;
 }
 
-function handleSaveConfig() {
-  configDialogVisible.value = false;
-  ElMessage.success("API 配置已保存到当前前端状态。");
+async function handleUpload() {
+  if (!uploadForm.file) {
+    ElMessage.warning("请先选择 PDF 文件");
+    return;
+  }
+
+  try {
+    const result = await uploadReport({
+      file: uploadForm.file,
+      type: uploadForm.type,
+      options: uploadForm.options
+    });
+    uploadDialogVisible.value = false;
+    uploadForm.file = null;
+    if (fileInput.value) {
+      fileInput.value.value = "";
+    }
+    await selectReport(result.reportId);
+    router.push({ name: "parsing" });
+    ElMessage.success("上传成功，后端已开始解析。");
+  } catch (error) {
+    ElMessage.error(error.message || "上传失败");
+  }
 }
+
+onMounted(async () => {
+  await loadReports();
+  if (state.currentDocId) {
+    await loadReportResult(state.currentDocId);
+  }
+});
 </script>

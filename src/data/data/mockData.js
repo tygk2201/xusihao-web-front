@@ -111,7 +111,7 @@ export const parameters = [
   { id: 4, equipmentId: "equ-pump", equipmentName: "循环水泵", paramName: "功率", value: 250, unit: "kW", source: "表 P-101" },
   { id: 5, equipmentId: "equ-pump", equipmentName: "循环水泵", paramName: "扬程", value: 85, unit: "m", source: "文本" },
   { id: 6, equipmentId: "equ-turbine", equipmentName: "燃气轮机", paramName: "出力", value: 150, unit: "MW", source: "表 C-001" },
-  { id: 7, equipmentId: "equ-turbine", equipmentName: "燃机效率", paramName: "热效率", value: 38.5, unit: "%", source: "文本" }
+  { id: 7, equipmentId: "equ-turbine", equipmentName: "燃气轮机", paramName: "热效率", value: 38.5, unit: "%", source: "文本" }
 ];
 
 export const relations = [
