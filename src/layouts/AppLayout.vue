@@ -131,6 +131,7 @@ import {
   Search,
   Setting,
   Share,
+  TrendCharts,
   UploadFilled
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
@@ -145,7 +146,8 @@ const menuItems = [
   { name: "dashboard", path: "/dashboard", label: "工程报告库", icon: Files },
   { name: "parsing", path: "/parsing", label: "报告解析", icon: Memo },
   { name: "graph", path: "/graph", label: "系统图谱", icon: Share },
-  { name: "qa", path: "/qa", label: "工程问答", icon: ChatDotRound }
+  { name: "qa", path: "/qa", label: "工程问答", icon: ChatDotRound },
+  { name: "formula", path: "/formula", label: "公式动画", icon: TrendCharts }
 ];
 
 const activeMenu = computed(() => route.path);

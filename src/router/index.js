@@ -4,6 +4,7 @@ import DashboardView from "../views/DashboardView.vue";
 import ParsingView from "../views/ParsingView.vue";
 import GraphView from "../views/GraphView.vue";
 import QaView from "../views/QaView.vue";
+import FormulaAnimationView from "../views/FormulaAnimationView.vue";
 
 const routes = [
   {
@@ -49,6 +50,16 @@ const routes = [
           title: "工程问答",
           menuLabel: "工程问答",
           icon: "ChatDotRound"
+        }
+      },
+      {
+        path: "formula",
+        name: "formula",
+        component: FormulaAnimationView,
+        meta: {
+          title: "公式动画",
+          menuLabel: "公式动画",
+          icon: "TrendCharts"
         }
       }
     ]

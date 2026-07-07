@@ -16,6 +16,7 @@
 后端端口：3000
 Nginx 配置：/etc/nginx/sites-available/luoxiaomiao.cn
 密码：Luoxiao1234
+登录方式：使用 SSH 密钥或本地密码管理器保存的登录信息
 ```
 
 不要把服务器密码写入代码仓库或文档。建议后续改用 SSH 密钥登录。
@@ -53,27 +54,22 @@ http://127.0.0.1:3000/api/health
 
 ```bash
 cd /Users/luoxiao/Desktop/lx-test/frontend
-python3 -m http.server 5173
+npm install
+npm run dev
 ```
 
 前端地址：
 
 ```text
-http://127.0.0.1:5173/index.html
+http://127.0.0.1:5173
 ```
 
 ## 4. 部署前检查
 
-前端接口地址应保持为相对路径：
+前端接真实接口时，接口地址应保持为相对路径：
 
 ```js
 const API_BASE = "/api";
-```
-
-文件位置：
-
-```text
-/Users/luoxiao/Desktop/lx-test/frontend/js/api.js
 ```
 
 这样线上请求会走：
@@ -82,53 +78,46 @@ const API_BASE = "/api";
 https://luoxiaomiao.cn/api/...
 ```
 
-## 5. 上传代码到服务器
+## 5. 构建并上传前端
 
-在本地 Mac 终端执行：
+每次修改前端后，先在本地 Mac 终端执行构建：
 
 ```bash
-scp -r /Users/luoxiao/Desktop/lx-test ubuntu@111.231.16.149:~/lx-test
+cd /Users/luoxiao/Desktop/lx-test/frontend
+npm run build
 ```
 
-如果服务器上已经存在旧的 `~/lx-test`，可以先登录服务器删除：
+构建完成后，把 `dist/` 里面的文件上传到服务器前端目录：
+
+```bash
+rsync -av --delete dist/ ubuntu@111.231.16.149:/opt/lx-test/frontend/
+```
+
+注意：
+
+- 这里上传的是 `dist/` 里面的内容，不是上传整个 `dist` 文件夹。
+- 服务器上的前端目录仍然是 `/opt/lx-test/frontend`。
+- 前端只是静态文件，上传完成后不需要重启 Nginx；浏览器强制刷新即可看到新版本。
+- `--delete` 会让服务器前端目录和本地 `dist/` 保持一致，确认 `/opt/lx-test/frontend` 只用于存放线上前端静态文件后再使用。
+
+如果本地没有 `rsync`，也可以使用 `scp`：
+
+```bash
+scp -r dist/* ubuntu@111.231.16.149:/opt/lx-test/frontend/
+```
+
+## 6. 更新后端代码
+
+只有后端代码发生变化时，才需要上传后端代码。可以在本地 Mac 终端执行：
+
+```bash
+rsync -av --delete /Users/luoxiao/Desktop/lx-test/backend/ ubuntu@111.231.16.149:/opt/lx-test/backend/
+```
+
+上传后登录服务器：
 
 ```bash
 ssh ubuntu@111.231.16.149
-rm -rf ~/lx-test
-exit
-```
-
-然后重新上传。
-
-## 6. 移动代码到正式目录
-
-上传完成后，登录服务器：
-
-```bash
-ssh ubuntu@111.231.16.149
-```
-
-执行：
-
-```bash
-sudo rm -rf /opt/lx-test
-sudo mv ~/lx-test /opt/lx-test
-sudo chown -R ubuntu:ubuntu /opt/lx-test
-```
-
-检查目录：
-
-```bash
-ls -la /opt/lx-test
-```
-
-应该看到：
-
-```text
-frontend
-backend
-README.md
-DEPLOYMENT.md
 ```
 
 ## 7. 更新后端服务
@@ -190,7 +179,7 @@ Nginx 配置文件：
 sudo nano /etc/nginx/sites-available/luoxiaomiao.cn
 ```
 
-核心配置应包含：
+核心配置应包含。前端目录指向 `/opt/lx-test/frontend`，该目录中应直接包含 `index.html` 和 `assets/`：
 
 ```nginx
 root /opt/lx-test/frontend;
@@ -207,12 +196,14 @@ location /api/ {
 }
 ```
 
-修改后检查并重载：
+只有修改 Nginx 配置后，才需要检查并重载：
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+如果只是重新上传了前端构建产物，不需要重启或重载 Nginx。
 
 ## 9. 线上验证
 
